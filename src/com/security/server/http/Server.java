@@ -19,7 +19,19 @@ public class Server {
     //Sessions are handled in a double hashmap. The first one called sessions handles the UUID to time assciation so that sessions can be tracked based on time.
     //The second one binds a user ID to a session ID and makes sure that the same user is using that session ID.
     //Another security implementation may require comparing the user's last well known IP address or MAC address so we can be sure the person is the same person.
+    /**
+     * <b>LinkedHashMap Sessions</b>
+     * <p>
+     *     Holds the session UUID alongside the UNIX style Timestamp that should be its creation or renewal date plus 5 minutes
+     * </p>
+     */
     public static LinkedHashMap<UUID, Integer> sessions = new LinkedHashMap<>();
+    /**
+     * <b>LinkedHashMap SIDS</b>
+     * <p>
+     *     Holds the session UUID paired with the User ID associated
+     * </p>
+     */
     public static LinkedHashMap<UUID, Integer> sids = new LinkedHashMap<>();
 
     public Server()throws Exception {
@@ -101,6 +113,18 @@ public class Server {
         System.out.println("Cleaned " + i + " sessions");
     }
 
+    public static String requestKeepalive(String sessionKey, int id) {
+        UUID uuid = UUID.fromString(sessionKey);
+        if (sessions.containsKey(uuid)){
+
+            if (sids.get(uuid).equals(id)){
+                sessions.replace(uuid, Math.toIntExact(System.currentTimeMillis()/1000L + 300));
+            }
+            //TODO: add correct response to string
+
+        }
+        //return;
+    }
 
 
     // String[] test = Status.split("\n");

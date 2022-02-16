@@ -1,7 +1,5 @@
 package com.security.server.db;
 
-import javax.sound.midi.SysexMessage;
-import java.awt.desktop.SystemEventListener;
 import java.sql.*;
 import java.util.Objects;
 
@@ -21,7 +19,7 @@ public class AuthServer {
         System.out.println("Querying tables..");
         Statement statement = connection.createStatement();
         statement.execute("CREATE TABLE IF NOT EXISTS AUTH(ID IDENTITY NOT NULL PRIMARY KEY, USERNAME VARCHAR(64), PASSWORD VARCHAR(128))");
-        statement.execute("CREATE TABLE IF NOT EXISTS CAMERAS(UUID CHAR(14) NOT NULL, NAME VARCHAR(128) NOT NULL, LAST_IP VARCHAR(21), LAST_STATUS CHAR(8), OWNER IDENTITY)");
+        statement.execute("CREATE TABLE IF NOT EXISTS CAMERAS(UUID CHAR(14) NOT NULL, NAME VARCHAR(128) NOT NULL, LAST_IP VARCHAR(21), LAST_STATUS CHAR(8), OWNER IDENTITY, AUTHENTICATOR VARCHAR(20) NOT NULL)");
 
         System.out.println("Querying values..");
 
@@ -43,7 +41,7 @@ public class AuthServer {
         return true;
     }
 
-    public boolean create(){
+    public void create(){
         Statement statement = null;
         try {
             System.out.println("Creating Database..");
@@ -53,15 +51,13 @@ public class AuthServer {
             statement.execute("MERGE INTO AUTH(ID, USERNAME, PASSWORD) VALUES(0, 'DEFAULT', 'DEFAULT')");
             System.out.println("Merged default user");
 
-            statement.execute("CREATE TABLE IF NOT EXISTS CAMERAS(UUID CHAR(14) NOT NULL, NAME VARCHAR(128) NOT NULL, LAST_IP VARCHAR(21), LAST_STATUS CHAR(8), OWNER IDENTITY)");
-            statement.execute("MERGE INTO CAMERAS(UUID, NAME, LAST_IP, LAST_STATUS, OWNER) VALUES('0000-0000-0000', 'dumb base station', '0.0.0.0', 'DEADCAMS', 0)");
+            statement.execute("CREATE TABLE IF NOT EXISTS CAMERAS(UUID CHAR(14) NOT NULL, NAME VARCHAR(128) NOT NULL, LAST_IP VARCHAR(21), LAST_STATUS CHAR(8), OWNER IDENTITY, AUTHENTICATOR VARCHAR(20) NOT NULL)");
+            statement.execute("MERGE INTO CAMERAS(UUID, NAME, LAST_IP, LAST_STATUS, OWNER, AUTHENTICATOR) VALUES('0000-0000-0000', 'dumb base station', '0.0.0.0', 'DEADCAMS', 0, 'defaultbasestation')");
             System.out.println("Merged Default Camera");
 
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
         }
-        return true;
     }
 
     public Connection getConnection(){

@@ -59,7 +59,7 @@ public class Handler {
                             try {
                                 ResultSet set = Operations.executeQuery("SELECT ID FROM AUTH WHERE USERNAME='" + login[0] + "' AND PASSWORD='" + login[1] + "'");
                                 if (set == null) {
-                                    response = "-1\n-1";    //The response for authentication is -1 for both the session key generated and the user id. Nobody can have a UUID of -1.
+                                    response = "%INVALID";    //The response for authentication is -1 for both the session key generated and the user id. Nobody can have a UUID of -1.
                                 } else {
                                     int id = Integer.parseInt(Operations.findSpecificResult(set, "ID"));
                                     code = 200;
@@ -125,6 +125,19 @@ public class Handler {
 
                             String serial = splitbody[0];
                             String status = splitbody[1];
+                            String authenticator = splitbody[2];
+
+                            try {
+                                Operations.executeQuery("UPDATE CAMERAS(LAST_IP, LAST_STATUS) VALUES('" + address + "', '" + status + "') WHERE UUID='" + serial + " AND AUTHENTICATOR='" + authenticator + "'");
+                            } catch (SQLException e) {
+                                e.printStackTrace();
+                            }
+
+
+
+                        }
+                        case "keepalive" -> {
+                            String sessionKey = body;
 
 
 
