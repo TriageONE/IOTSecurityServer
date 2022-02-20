@@ -50,6 +50,7 @@ public class Handler {
                 String body = getBody(t);
 
                 int code = 500;
+                response = "%MISUNDERSTOOD";
                 if (header != null) {
                     String type = header.get(0);
                     switch (type) {
@@ -112,11 +113,57 @@ public class Handler {
                             }
 
                         }
+                        case "status" -> {
+                            //The idea is to ask the server here for a status on a list of cameras
+                            //The list is separated by a line break
+                            //The first line should be the session key
+                            //Next should be a list of cams
+
+                            String[] split = body.split("\n");
+
+                            String session_key = split[0].split("\\|")[0];
+                            int id = Integer.parseInt(split[0].split("\\|")[1]);
+                            //key|id
+                            //Check if session key valid or not
+                            UserAuth user = new UserAuth(id, session_key);
+                            if (!user.validate()) {
+                                response = "%INVALID";
+                                code = 511;
+                                System.err.println("User auth failed for " + id);
+                                break;
+                            }
+                            //The subset of cameras the user wishes to query
+                            LinkedList<String> serials = new LinkedList<>(Arrays.asList(split).subList(1, split.length + 1));
+
+                            //The subset of filtered valid cameras that the user specified above, and has confirmed ownership of should be a modified Serials list
+                            //Find all of these cameras and their status
+                            ResultSet set;
+                            try {
+                                set = Operations.executeQuery("SELECT UUID FROM CAMERAS WHERE OWNER=" + user.getUserID());
+                                LinkedList<String> results = new LinkedList<>(Arrays.asList(Operations.findAllResults(set).split("\n")));
+                                serials.removeIf(serial -> !results.contains(serial));
+                            } catch (SQLException e) {
+                                e.printStackTrace();
+                            }
+                            //The now valid list of serials can now be queried for their statuses and returned to the client
+                            StringBuilder complingResponse = new StringBuilder();
+                            for(String serial : serials) {
+                                try {
+                                    set = Operations.executeQuery("SELECT STATUS FROM CAMERAS WHERE UUID='" + serial + "'");
+                                    complingResponse.append(serial).append("|").append(Operations.findSpecificResult(set, "STATUS")).append("\n");
+                                } catch (SQLException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                            response = complingResponse.toString();
+                            code = 201;
+                        }
                         case "checkin" -> {
                             //The camera must check in with the server.
                             //In order to check in, the camera has to have a serial number, and a string code.
 
                             //In the future, cameras should have their own unique login so that they can authenticate themselves. Right now, if you provide all the right info, you could spoof this.
+                            System.out.println("Checkin incoming");
                             InetSocketAddress address = t.getRemoteAddress();
                             Date date = new Date();
                             date.setTime(System.currentTimeMillis());
@@ -128,25 +175,54 @@ public class Handler {
                             String authenticator = splitbody[2];
 
                             try {
-                                Operations.executeQuery("UPDATE CAMERAS(LAST_IP, LAST_STATUS) VALUES('" + address + "', '" + status + "') WHERE UUID='" + serial + " AND AUTHENTICATOR='" + authenticator + "'");
+                                ResultSet set = Operations.executeQuery("SELECT AUTHENTICATOR FROM CAMERAS WHERE UUID='" + serial + "'");
+
+                                if(set == null){
+                                    code = 404;
+                                    response = "%NOT_FOUND";
+                                    System.err.println("Base not found: " + serial);
+                                    break;
+                                }
+                                String remoteAuth = Operations.findSpecificResult(set, "AUTHENTICATOR");
+
+                                if(!remoteAuth.equals(authenticator)){
+                                    code = 401;
+                                    response = "%INVALID";
+                                    System.err.println("Auth failure, " + remoteAuth + " vs " + authenticator);
+                                    break;
+                                }
+                                Operations.executeAction(
+                                "UPDATE CAMERAS " +
+                                    "SET LAST_IP='" + address +
+                                    "', LAST_STATUS='" + status +
+                                    "' WHERE UUID='" + serial +
+                                    "' AND AUTHENTICATOR='" + authenticator + "';");
+
+                                System.out.println("Updated base " + serial + " with status " + status);
+                                code = 201;
+                                response = "%UPDATED";
                             } catch (SQLException e) {
                                 e.printStackTrace();
                             }
 
-
-
                         }
                         case "keepalive" -> {
-                            String sessionKey = body;
-
-
-
+                            //In order to keep the connection alive, the user must send back their session
+                            // key, id and a random set of data separated by a pipe character
+                            String[] sessionKey = body.split("\\|");
+                            boolean alive = Server.requestKeepalive(sessionKey[0], Integer.parseInt(sessionKey[0]));
+                            if (alive) {
+                                response = "%UPDATED";
+                                code = 202;
+                            } else {
+                                response = "NO_SESSION";
+                                code = 401;
+                            }
                         }
                     }
                 }
 
                 assert header != null;
-                System.out.println(body + "\nHEADER: " + header.get(0) + ", LENGTH:" + header.size());
                 assert response != null;
                 respond(t, code, response);
 

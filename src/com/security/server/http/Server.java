@@ -113,17 +113,14 @@ public class Server {
         System.out.println("Cleaned " + i + " sessions");
     }
 
-    public static String requestKeepalive(String sessionKey, int id) {
+    public static boolean requestKeepalive(String sessionKey, int id) {
         UUID uuid = UUID.fromString(sessionKey);
         if (sessions.containsKey(uuid)){
-
             if (sids.get(uuid).equals(id)){
                 sessions.replace(uuid, Math.toIntExact(System.currentTimeMillis()/1000L + 300));
-            }
-            //TODO: add correct response to string
-
-        }
-        //return;
+                return true;
+            } else return false;
+        } else return false;
     }
 
 
@@ -136,6 +133,7 @@ public class Server {
         System.out.println("Entered session id " + uuid + " into table SESSIONS and SIDS");
         return uuid;
     }
+
 
     public static List<LinkedHashMap> getSessions() {
         List<LinkedHashMap> set = new LinkedList<>();

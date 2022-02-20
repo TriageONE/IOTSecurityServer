@@ -14,6 +14,11 @@ public class UserAuth {
         this.userID = id;
         this.sessionKey = uuid;
     }
+    public UserAuth(int id, String uuid){
+        this.userID = id;
+        this.sessionKey = UUID.fromString(uuid);
+    }
+
 
     public boolean validate(){
         //Does the session list contain the key?

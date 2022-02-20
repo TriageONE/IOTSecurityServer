@@ -39,7 +39,12 @@ public class Operations {
         return null;
     }
 
-    public static ResultSet executeQuery( String sql) throws SQLException {
+    public static boolean executeAction(String sql) throws SQLException {
+
+        return connection.createStatement().execute(sql);
+    }
+
+    public static ResultSet executeQuery(String sql) throws SQLException {
 
         return connection.createStatement().executeQuery(sql);
     }
