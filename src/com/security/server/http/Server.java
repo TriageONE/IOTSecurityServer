@@ -130,7 +130,7 @@ public class Server {
         UUID uuid = UUID.randomUUID();
         sessions.put(uuid, Math.toIntExact(System.currentTimeMillis()/1000L + 300)); //5 Minutes from now
         sids.put(uuid, userID);
-        System.out.println("Entered session id " + uuid + " into table SESSIONS and SIDS");
+        System.out.println("Entered session id " + uuid + ", ID:" + userID +" into session table");
         return uuid;
     }
 

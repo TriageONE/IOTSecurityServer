@@ -60,11 +60,14 @@ public class Handler {
                             try {
                                 ResultSet set = Operations.executeQuery("SELECT ID FROM AUTH WHERE USERNAME='" + login[0] + "' AND PASSWORD='" + login[1] + "'");
                                 if (set == null) {
+                                    System.out.println("AUTHENTICATION: Null set, returning INVALID");
                                     response = "%INVALID";    //The response for authentication is -1 for both the session key generated and the user id. Nobody can have a UUID of -1.
                                 } else {
+                                    System.out.println("AUTHENTICATION: Found ID AND Session");
                                     int id = Integer.parseInt(Operations.findSpecificResult(set, "ID"));
                                     code = 200;
                                     response = id + "\n" + Server.addNewSession(id);
+                                    System.out.println("Sending response " + response + " || CODE " + code);
                                 }
                             } catch (SQLException e) {
                                 e.printStackTrace();
@@ -89,7 +92,7 @@ public class Handler {
                                 //response = Operations.executeQuery("SELECT ");
                                 ResultSet resultSet;
                                 try {
-                                    resultSet = Operations.executeQuery("SELECT NAME, UUID FROM CAMERAS WHERE OWNER='" + user.getUserID() + "'");
+                                    resultSet = Operations.executeQuery("SELECT UUID, NAME FROM CAMERAS WHERE OWNER='" + user.getUserID() + "'");
                                 } catch (SQLException e) {
                                     e.printStackTrace();
                                     response = "";
@@ -100,6 +103,8 @@ public class Handler {
                                 //What this should look like is for every camera, there is a name and UUID. These values are split with a pipe. The entire cameras are split with line breaks
                                 try {
                                     response = Operations.findAllResults(resultSet);
+                                    System.out.println("CAMS SENT: \n" + response);
+
                                     code = 200;
                                 } catch (SQLException e) {
                                     e.printStackTrace();
@@ -110,6 +115,7 @@ public class Handler {
                                 //respond session invalid
                                 code = 511;
                                 response = "%INVALID";
+                                System.out.println("Invalid session ID: " + user.getSessionKey());
                             }
 
                         }
@@ -218,6 +224,43 @@ public class Handler {
                                 response = "NO_SESSION";
                                 code = 401;
                             }
+                        }
+                        case "stream" -> {
+                            //Data format should be in format id | session_key | camera_ID
+                            System.out.println("Stream requested " + body);
+                            String[] requestBody = body.split("\\|");
+
+                            int userID = Integer.parseInt(requestBody[0]);
+                            String session_key = requestBody[1];
+                            String cameraID = requestBody[2];
+
+                            //Validate user
+
+                            UserAuth user = new UserAuth(userID, session_key);
+
+                            if (!user.validate()){
+                                System.out.println("User not valid: " + session_key + ", " + userID);
+                                response = "%INVALID";
+                                break;
+                            }
+
+                            try {
+                                ResultSet set = Operations.executeQuery("SELECT LAST_IP FROM CAMERAS WHERE UUID='" + cameraID + "' AND OWNER=" + userID);
+                                System.out.println("SELECT LAST_IP FROM CAMERAS WHERE UUID='" + cameraID + "' AND OWNER=" + userID);
+                                if (set == null) {
+                                    response = "%BAD_REQUEST";
+                                    System.out.println("Bad request");
+                                    code = 511;
+                                } else {
+                                    System.out.println(set);
+                                    response = Operations.findSpecificResult(set, "LAST_IP");
+                                    System.out.println(response + ": Last IP");
+                                    code = 200;
+                                }
+                            } catch (SQLException e) {
+                                e.printStackTrace();
+                            }
+
                         }
                     }
                 }
