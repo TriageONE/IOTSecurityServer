@@ -1,0 +1,12 @@
+Commands are sent back to the client as a response mechanism that should be handled specially. When the server sends a
+command instead of the usual information, it should be treated as if there was a problem. Some requests are meant to only
+respond with commands. Here are a list of commands that may need to be handled:
+
+    - %INVALID      Denotes a session key used to authenticate a user is not valid, or a login has failed. Usually paired with status code 500
+    - %BAD_PAIR     Denotes that when a user attempted to keepalive, the user ID did not match the session key in memory, so the transaction to keepalive did not occur
+    - %NO_SESSION   When a keepalive is sent but there is no session to keep alive
+    - %RENEWED      Sent back whenever a successful keepalive is transacted
+
+Presumably this all could be done with a null-body status code only implementation but this is actually more secure.
+The codes above for the most part return 200-OK, even for bad pairs and no session. This may actually curb forensic
+analysis of traffic patterns from outside onlookers by obfuscating details about what the client is doing.

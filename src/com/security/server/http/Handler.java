@@ -1,18 +1,14 @@
 package com.security.server.http;
 
-import com.security.server.Main;
 import com.security.server.auth.UserAuth;
 import com.security.server.db.Operations;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import org.h2.engine.User;
-import org.h2.security.auth.Authenticator;
 
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.LinkOption;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
@@ -266,6 +262,7 @@ public class Handler {
                 }
 
                 assert header != null;
+                System.out.println(body + "\nHEADER: " + header.get(0) + ", LENGTH:" + header.size());
                 assert response != null;
                 respond(t, code, response);
 

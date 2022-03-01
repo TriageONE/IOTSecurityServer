@@ -116,6 +116,7 @@ public class Server {
     public static boolean requestKeepalive(String sessionKey, int id) {
         UUID uuid = UUID.fromString(sessionKey);
         if (sessions.containsKey(uuid)){
+
             if (sids.get(uuid).equals(id)){
                 sessions.replace(uuid, Math.toIntExact(System.currentTimeMillis()/1000L + 300));
                 return true;
@@ -133,7 +134,6 @@ public class Server {
         System.out.println("Entered session id " + uuid + ", ID:" + userID +" into session table");
         return uuid;
     }
-
 
     public static List<LinkedHashMap> getSessions() {
         List<LinkedHashMap> set = new LinkedList<>();
