@@ -6,6 +6,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -166,7 +167,7 @@ public class Handler {
 
                             //In the future, cameras should have their own unique login so that they can authenticate themselves. Right now, if you provide all the right info, you could spoof this.
                             System.out.println("Checkin incoming");
-                            InetSocketAddress address = t.getRemoteAddress();
+                            String address = t.getRemoteAddress().getAddress().getHostAddress();
                             Date date = new Date();
                             date.setTime(System.currentTimeMillis());
 
@@ -200,7 +201,7 @@ public class Handler {
                                     "' WHERE UUID='" + serial +
                                     "' AND AUTHENTICATOR='" + authenticator + "';");
 
-                                System.out.println("Updated base " + serial + " with status " + status);
+                                System.out.println("Updated base " + serial + " with status " + status + " and IP " + t.getRemoteAddress());
                                 code = 201;
                                 response = "%UPDATED";
                             } catch (SQLException e) {

@@ -24,10 +24,6 @@ public class Main {
         }
 
         Server httpServer = new Server();
-        System.out.println(1/2);
-        for (int i = 0; i <= 10; i++){
-            System.out.println(Operations.createNewSerial());
-        }
 
         /*
         Creating a server is fine for other authenticated clients doing critical

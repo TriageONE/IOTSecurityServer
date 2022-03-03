@@ -84,7 +84,6 @@ public class Server {
         new Timer(5000, taskPerformer).start();
     }
 
-
     /*
     FRANTIC (TM) Security
     The FRANTIC security core is a simple session handler that records and maintains valid sessions from users.

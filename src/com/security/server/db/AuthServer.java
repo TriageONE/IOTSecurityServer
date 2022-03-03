@@ -19,14 +19,7 @@ public class AuthServer {
         System.out.println("Querying tables..");
         Statement statement = connection.createStatement();
         statement.execute("CREATE TABLE IF NOT EXISTS AUTH(ID IDENTITY NOT NULL PRIMARY KEY, USERNAME VARCHAR(64), PASSWORD VARCHAR(128))");
-        statement.execute(
-                "CREATE TABLE IF NOT EXISTS CAMERAS(" +
-                        "UUID CHAR(14) NOT NULL," +
-                        " NAME VARCHAR(128) NOT NULL," +
-                        " LAST_IP VARCHAR(38)," +
-                        " LAST_STATUS CHAR(8)," +
-                        " OWNER IDENTITY," +
-                        " AUTHENTICATOR VARCHAR(20) NOT NULL)");
+        statement.execute("CREATE TABLE IF NOT EXISTS CAMERAS(UUID CHAR(14) NOT NULL, NAME VARCHAR(128) NOT NULL, LAST_IP VARCHAR(38), LAST_STATUS CHAR(8), OWNER BIGINT, AUTHENTICATOR VARCHAR(20) NOT NULL)");
 
         System.out.println("Querying values..");
 
@@ -58,8 +51,8 @@ public class AuthServer {
             statement.execute("MERGE INTO AUTH(ID, USERNAME, PASSWORD) VALUES(0, 'DEFAULT', 'DEFAULT')");
             System.out.println("Merged default user");
 
-            statement.execute("CREATE TABLE IF NOT EXISTS CAMERAS(UUID CHAR(14) NOT NULL, NAME VARCHAR(128) NOT NULL, LAST_IP VARCHAR(38), LAST_STATUS CHAR(8), OWNER IDENTITY, AUTHENTICATOR VARCHAR(20) NOT NULL)");
-            statement.execute("MERGE INTO CAMERAS(UUID, NAME, LAST_IP, LAST_STATUS, OWNER, AUTHENTICATOR) VALUES('0000-0000-0000', 'dumb base station', '0.0.0.0', 'DEADCAMS', 0, 'defaultbasestation')");
+            statement.execute("CREATE TABLE IF NOT EXISTS CAMERAS(UUID CHAR(14) NOT NULL, NAME VARCHAR(128) NOT NULL, LAST_IP VARCHAR(38), LAST_STATUS CHAR(8), OWNER BIGINT, AUTHENTICATOR VARCHAR(20) NOT NULL)");
+            statement.execute("INSERT INTO CAMERAS(UUID, NAME, LAST_IP, LAST_STATUS, OWNER, AUTHENTICATOR) VALUES('0000-0000-0000', 'dumb base station', '0.0.0.0', 'DEADCAMS', 0, 'defaultbasestation')");
             System.out.println("Merged Default Camera");
 
         } catch (SQLException e) {
