@@ -2,6 +2,7 @@ package com.security.server.http;
 
 import com.security.server.auth.UserAuth;
 import com.security.server.db.Operations;
+import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -10,6 +11,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
@@ -35,21 +38,36 @@ public class Handler {
         return textBuilder.toString();
     }
 
+    static class StreamPuncherDaemon implements HttpHandler {
+        @Override
+        public void handle(HttpExchange t) throws IOException {
+            String method = t.getRequestMethod();
+            String response;
+            int code;
+
+        }
+    }
+
     static class HTTPDaemon implements HttpHandler {
         @Override
         public void handle(HttpExchange t) throws IOException {
             String method = t.getRequestMethod();
-            String response = null;
+            String response;
+            String URL = null;
+            boolean shouldSolicit = false;
             if (Objects.equals(method, "POST")) {
                 System.out.println("POST received");
-
-                List<String> header = t.getRequestHeaders().get("request");
+                Headers header = t.getRequestHeaders();
                 String body = getBody(t);
+                String mainHeader = null;
+                String type = null;
 
                 int code = 500;
                 response = "%MISUNDERSTOOD";
-                if (header != null) {
-                    String type = header.get(0);
+
+                if (header.containsKey("request")){
+                    mainHeader = "request";
+                    type = header.get("request").get(0);
                     switch (type) {
                         case "authentication" -> {
                             String[] login = body.split("\\|");
@@ -167,7 +185,7 @@ public class Handler {
 
                             //In the future, cameras should have their own unique login so that they can authenticate themselves. Right now, if you provide all the right info, you could spoof this.
                             System.out.println("Checkin incoming");
-                            String address = t.getRemoteAddress().getAddress().getHostAddress();
+                            String address = t.getRemoteAddress().toString();
                             Date date = new Date();
                             date.setTime(System.currentTimeMillis());
 
@@ -195,11 +213,11 @@ public class Handler {
                                     break;
                                 }
                                 Operations.executeAction(
-                                "UPDATE CAMERAS " +
-                                    "SET LAST_IP='" + address +
-                                    "', LAST_STATUS='" + status +
-                                    "' WHERE UUID='" + serial +
-                                    "' AND AUTHENTICATOR='" + authenticator + "';");
+                                        "UPDATE CAMERAS " +
+                                                "SET LAST_IP='" + address +
+                                                "', LAST_STATUS='" + status +
+                                                "' WHERE UUID='" + serial +
+                                                "' AND AUTHENTICATOR='" + authenticator + "';");
 
                                 System.out.println("Updated base " + serial + " with status " + status + " and IP " + t.getRemoteAddress());
                                 code = 201;
@@ -250,7 +268,7 @@ public class Handler {
                                     code = 511;
                                 } else {
                                     System.out.println(set);
-                                    response = Operations.findSpecificResult(set, "LAST_IP");
+                                    response = Operations.findSpecificResult(set, "LAST_IP").split("/")[1];
                                     System.out.println(response + ": Last IP");
                                     code = 200;
                                 }
@@ -260,18 +278,60 @@ public class Handler {
 
                         }
                     }
+                } else
+
+                if (header.containsKey("solicit")){
+                    mainHeader = "solicit";
+                    type = header.get("solicit").get(0);
+                    switch (type) {
+                        case "connection" -> {
+                            String[] address = t.getRemoteAddress().toString().split("[/:]");
+                            System.out.println(Arrays.toString(address));
+
+                            System.out.println("Solicitation requested at ip " + address[1] + " and port " + body);
+                            try {
+                                URL = "https://" + address[1] + ":" + body + "/test";
+                                System.out.println("Contacting " + URL + "...");
+                                shouldSolicit = true;
+                                response = "%SUCCESS";
+                                code = 210;
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
                 }
 
-                assert header != null;
-                System.out.println(body + "\nHEADER: " + header.get(0) + ", LENGTH:" + header.size());
+                System.out.println(body + "\nHEADER: " + mainHeader + ", KEY: " + type);
                 assert response != null;
                 respond(t, code, response);
+                if (shouldSolicit) {
+                    try {
+                        Https.Request request = Https.get(URL, new HashMap<>());
+                        System.out.println(request.getBody() + ", " + request.getStatus());
+                    } catch (NoSuchAlgorithmException | KeyManagementException e) {
+                        e.printStackTrace();
+                    }
+                }
 
             }
             if (Objects.equals(method, "GET")){
-                System.out.println("GET received, sending code");
-                response = "200 OK";
-                respond(t, 200, response);
+                List<String> header = t.getRequestHeaders().get("request");
+                int code = 500;
+                if (!header.isEmpty()){
+                    if (header.get(0).equals("source")){
+                        code = 200;
+                        response = t.getRemoteAddress().toString().split(":")[1];
+                    }
+                    else {
+                        response = "%MISUNDERSTOOD";
+                    }
+                    System.out.println("GET received: " + response);
+                } else{
+                    response = "%BAD_HEADER";
+                }
+
+                respond(t, code, response);
             }
             //Form the string to be sent
         }

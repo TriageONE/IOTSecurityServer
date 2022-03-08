@@ -1,15 +1,13 @@
 package com.security.server.http;
 
-import com.sun.net.httpserver.HttpServer;
+import com.security.server.Main;
 import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
+import org.h2.util.IOUtils;
 
 import javax.net.ssl.*;
-import javax.swing.*;
-import javax.swing.Timer;
-import java.awt.event.ActionListener;
-import java.io.FileInputStream;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.security.KeyStore;
 import java.util.*;
@@ -34,6 +32,22 @@ public class Server {
      */
     public static LinkedHashMap<UUID, Integer> sids = new LinkedHashMap<>();
 
+
+    public boolean writeFileOut(InputStream inputStream, String outputDestination) throws IOException {
+        try{
+            byte[] buffer = inputStream.readAllBytes();
+            File targetFile = new File(outputDestination);
+            OutputStream outStream = new FileOutputStream(targetFile);
+            outStream.write(buffer);
+            IOUtils.closeSilently(outStream);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+
+    }
+
     public Server()throws Exception {
         HttpsServer server = HttpsServer.create(new InetSocketAddress(8000), 0);
 
@@ -42,9 +56,23 @@ public class Server {
         // Initialise the keystore
         char[] password = "simulator".toCharArray();
         KeyStore ks = KeyStore.getInstance("JKS");
-        FileInputStream fis = new FileInputStream("lig.keystore");
+        InputStream uri = Objects.requireNonNull(Main.class.getResourceAsStream("/lig.keystore"));
+        System.out.println("Opened stream");
+        File outputFile = new File("lig.keystore");
+        System.out.println("Output File " +outputFile.getAbsolutePath());
+        if (!new File("./lig.keystore").exists()) {
+            if (writeFileOut(uri, "./lig.keystore")) {
+                System.out.println("Created new keystore");
+            } else {
+                System.out.println("Keystore Found");
+            }
+        }
 
-        ks.load(fis, password);
+        InputStream stream = new FileInputStream("lig.keystore");
+
+        //ExportResource("lig.keystore");
+
+        ks.load(stream, password);
 
         // Set up the key manager factory
         KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
@@ -79,9 +107,6 @@ public class Server {
         server.createContext("/test", new Handler.HTTPDaemon());
         server.setExecutor(null); // creates a default executor
         server.start();
-
-        ActionListener taskPerformer = evt -> sessionInvalidator();
-        new Timer(5000, taskPerformer).start();
     }
 
     /*
