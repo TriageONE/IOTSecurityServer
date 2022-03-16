@@ -53,6 +53,7 @@ public class Handler {
         public void handle(HttpExchange t) throws IOException {
             String method = t.getRequestMethod();
             String response;
+            int code;
             String URL = null;
             boolean shouldSolicit = false;
             if (Objects.equals(method, "POST")) {
@@ -62,7 +63,7 @@ public class Handler {
                 String mainHeader = null;
                 String type = null;
 
-                int code = 500;
+                code = 500;
                 response = "%MISUNDERSTOOD";
 
                 if (header.containsKey("request")){
@@ -107,7 +108,7 @@ public class Handler {
                                 //response = Operations.executeQuery("SELECT ");
                                 ResultSet resultSet;
                                 try {
-                                    resultSet = Operations.executeQuery("SELECT UUID, NAME FROM CAMERAS WHERE OWNER='" + user.getUserID() + "'");
+                                    resultSet = Operations.executeQuery("SELECT UUID, NAME, AUTHENTICATOR, LAST_STATUS FROM CAMERAS WHERE OWNER='" + user.getUserID() + "'");
                                 } catch (SQLException e) {
                                     e.printStackTrace();
                                     response = "";
@@ -300,6 +301,9 @@ public class Handler {
                             }
                         }
                     }
+                } else {
+                    response = "%NO_HEADER";
+                    code = 200;
                 }
 
                 System.out.println(body + "\nHEADER: " + mainHeader + ", KEY: " + type);
@@ -316,8 +320,10 @@ public class Handler {
 
             }
             if (Objects.equals(method, "GET")){
-                List<String> header = t.getRequestHeaders().get("request");
-                int code = 500;
+                System.out.println("GET Received");
+                List<String> header = new ArrayList<>();
+                if (t.getRequestHeaders().containsKey("request")) header = t.getRequestHeaders().get("request");
+                code = 500;
                 if (!header.isEmpty()){
                     if (header.get(0).equals("source")){
                         code = 200;
@@ -328,11 +334,12 @@ public class Handler {
                     }
                     System.out.println("GET received: " + response);
                 } else{
-                    response = "%BAD_HEADER";
+                    response = "%NO_HEADER";
+                    code = 200;
                 }
-
                 respond(t, code, response);
             }
+
             //Form the string to be sent
         }
     }
