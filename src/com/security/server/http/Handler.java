@@ -5,6 +5,10 @@ import com.security.server.db.Operations;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -40,7 +44,7 @@ public class Handler {
 
     static class StreamPuncherDaemon implements HttpHandler {
         @Override
-        public void handle(HttpExchange t) throws IOException {
+        public void handle(HttpExchange t){
             String method = t.getRequestMethod();
             String response;
             int code;
@@ -278,6 +282,63 @@ public class Handler {
                             }
 
                         }
+                        case "weather" -> {
+                            /*
+                            The format for requesting weather data consists of the following:
+                            Serial = the serial of the camera, also known as the UUID
+                            Authenticator = the known password of the base
+                            Session ID = The User's session ID
+                            User ID = The user's ID
+
+                            within this format, we can ask for the weather status, if there is one:
+                            HEADER REQUEST WEATHER
+                            BODY "<serial>|<authenticator>|<user_id>|<session_id>
+                            if authenticated, therefore relay last weather, else relay command %NULL
+                             */
+
+                            String[] splitBody = body.split("\\|");
+                            String serial = splitBody[0];
+                            String authenticator = splitBody[1];
+                            String userID = splitBody[2];
+                            String sessionKey = splitBody[3];
+
+
+                            UserAuth user = new UserAuth(Integer.parseInt(userID), sessionKey);
+                            if (!user.validate()) {
+                                response = "%INVALID_USER";
+                                code = 401;
+                                break;
+                            }
+                            try {
+                                ResultSet set = Operations.executeQuery("SELECT AUTHENTICATOR FROM CAMERAS WHERE UUID='" + serial + "'");
+
+                                if(set == null){
+                                    code = 404;
+                                    response = "%NOT_FOUND";
+                                    System.err.println("Base not found: " + serial);
+                                    break;
+                                }
+                                String remoteAuth = Operations.findSpecificResult(set, "AUTHENTICATOR");
+
+                                if(!remoteAuth.equals(authenticator)){
+                                    code = 401;
+                                    response = "%INVALID_BASE";
+                                    System.err.println("Auth failure, " + remoteAuth + " vs " + authenticator);
+                                    break;
+                                }
+                            } catch (SQLException e) {
+                                e.printStackTrace();
+                            }
+                            if (Server.weatherData.containsKey(serial)){
+                                response = Server.weatherData.get(serial);
+                                code = 200;
+                            } else {
+                                response = "%NO_DATA";
+                                code = 204;
+                            }
+
+
+                        }
                     }
                 } else
 
@@ -299,6 +360,110 @@ public class Handler {
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
+                        }
+                        case "weather" -> {
+                            //pick apart the request
+
+                            String[] split1 = body.split("\n");
+
+                            String[] authSplit = split1[0].split("\\|");
+
+                            String serial = authSplit[0];
+                            String authenticator = authSplit[1];
+                            String weatherdata = split1[1];
+
+                            try {
+                                ResultSet set = Operations.executeQuery("SELECT AUTHENTICATOR FROM CAMERAS WHERE UUID='" + serial + "'");
+
+                                if (set == null) {
+                                    code = 404;
+                                    response = "%NOT_FOUND";
+                                    System.err.println("Base not found: " + serial);
+                                    break;
+                                }
+                                String remoteAuth = Operations.findSpecificResult(set, "AUTHENTICATOR");
+
+                                if (!remoteAuth.equals(authenticator)) {
+                                    code = 401;
+                                    response = "%INVALID";
+                                    System.err.println("Auth failure, " + remoteAuth + " vs " + authenticator);
+                                    break;
+                                }
+                                Server.weatherData.put(serial, weatherdata);
+                                code = 201;
+                                response = "%UPDATED";
+                            } catch (SQLException e) {
+                                e.printStackTrace();
+                            }
+
+                        }
+                        case "speaker" -> {
+                            /*
+                            The format in which a user can play a sound requires that
+                            they verify they are a valid user. The format in which data should come in
+                            looks like:
+                            HEADER SOLICIT SPEAKER
+                            BODY "<serial>|<authenticator>|<user_id>|<session_id>|<speaker_no.>
+
+                             */
+                            String[] splitBody = body.split("\\|");
+                            String serial = splitBody[0];
+                            String authenticator = splitBody[1];
+                            String userID = splitBody[2];
+                            String sessionKey = splitBody[3];
+                            int speaker = Integer.parseInt(splitBody[4]);
+
+                            UserAuth user = new UserAuth(Integer.parseInt(userID), sessionKey);
+                            if (!user.validate()) {
+                                response = "%INVALID_USER";
+                                code = 401;
+                                break;
+                            }
+                            try {
+                                ResultSet set = Operations.executeQuery("SELECT AUTHENTICATOR FROM CAMERAS WHERE UUID='" + serial + "'");
+
+                                if(set == null){
+                                    code = 404;
+                                    response = "%NOT_FOUND";
+                                    System.err.println("Base not found: " + serial);
+                                    break;
+                                }
+                                String remoteAuth = Operations.findSpecificResult(set, "AUTHENTICATOR");
+
+                                if(!remoteAuth.equals(authenticator)){
+                                    code = 401;
+                                    response = "%INVALID_BASE";
+                                    System.err.println("Auth failure, " + remoteAuth + " vs " + authenticator);
+                                    break;
+                                }
+                            } catch (SQLException e) {
+                                e.printStackTrace();
+                            }
+                            MqttConnectOptions options = new MqttConnectOptions();
+                            options.setUserName(serial);
+                            options.setPassword(authenticator.toCharArray());
+                            options.setAutomaticReconnect(true);
+                            options.setCleanSession(true);
+                            options.setConnectionTimeout(10);
+                            MqttClient client;
+
+                            try {
+                                client = new MqttClient("localhost:1883", serial);
+                                client.connect(options);
+                                client.publish(serial + "-A", new MqttMessage());
+                            } catch (MqttException e) {
+                                e.printStackTrace();
+                            }
+
+                            //They have identified themselves, and they also identified the camera. Now send the speaker packet
+                            /*
+                            some notes
+                            I have recently discovered a thing called MQTT, or Message Queuing Telemetry Transport. This system
+                            is interesting because both users and devices can 'subscribe' to a certain datatype, which makes it
+                            easy to send and recieve data from client to device and vice versa.
+                             */
+
+
                         }
                     }
                 } else {

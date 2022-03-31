@@ -31,9 +31,10 @@ public class Server {
      * </p>
      */
     public static LinkedHashMap<UUID, Integer> sids = new LinkedHashMap<>();
+    public static Map<String, String> weatherData = new HashMap<>();
 
 
-    public boolean writeFileOut(InputStream inputStream, String outputDestination) throws IOException {
+    public boolean writeFileOut(InputStream inputStream, String outputDestination){
         try{
             byte[] buffer = inputStream.readAllBytes();
             File targetFile = new File(outputDestination);
