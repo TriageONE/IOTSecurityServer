@@ -3,6 +3,8 @@ package com.security.server;
 import com.security.server.db.AuthServer;
 import com.security.server.db.Operations;
 import com.security.server.http.Server;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 
 import javax.swing.Timer;
 import java.awt.event.ActionListener;
@@ -15,6 +17,7 @@ import static com.security.server.http.Server.sessionInvalidator;
 
 public class Main {
     public static Connection connection;
+    public static MqttClient client;
     public static void main(String[] args) throws Exception {
 	// write your code here
 
@@ -31,6 +34,16 @@ public class Main {
         System.out.println("Starting Server");
         Server httpServer = new Server();
         System.out.println("Started");
+
+        //Set up the MQTT Publisher
+        MqttConnectOptions options = new MqttConnectOptions();
+        options.setUserName("LOCAL");
+        options.setPassword("LOCALROOT".toCharArray());
+        options.setAutomaticReconnect(true);
+        options.setCleanSession(true);
+        options.setConnectionTimeout(10);
+        client = new MqttClient("tcp://localhost:1883", "LOCAL");
+        client.connect(options);
 
 
         /*

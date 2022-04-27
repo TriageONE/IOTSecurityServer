@@ -4,6 +4,7 @@
     <root id="archive" name="SecurityServer.jar">
       <element id="module-output" name="SecurityServer" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/h2database/h2/2.1.210/h2-2.1.210.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/eclipse/paho/org.eclipse.paho.client.mqttv3/1.2.5/org.eclipse.paho.client.mqttv3-1.2.5.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>

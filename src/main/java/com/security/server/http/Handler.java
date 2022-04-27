@@ -1,5 +1,6 @@
 package com.security.server.http;
 
+import com.security.server.Main;
 import com.security.server.auth.UserAuth;
 import com.security.server.db.Operations;
 import com.sun.net.httpserver.Headers;
@@ -403,7 +404,7 @@ public class Handler {
                             they verify they are a valid user. The format in which data should come in
                             looks like:
                             HEADER SOLICIT SPEAKER
-                            BODY "<serial>|<authenticator>|<user_id>|<session_id>|<speaker_no.>
+                            BODY "<serial>|<authenticator>|<user_id>|<session_id>
 
                              */
                             String[] splitBody = body.split("\\|");
@@ -411,7 +412,8 @@ public class Handler {
                             String authenticator = splitBody[1];
                             String userID = splitBody[2];
                             String sessionKey = splitBody[3];
-                            int speaker = Integer.parseInt(splitBody[4]);
+
+                            System.out.println("Solicit speaker requested, data here: "+serial + "|" + authenticator + "|" + userID + "|" + sessionKey);
 
                             UserAuth user = new UserAuth(Integer.parseInt(userID), sessionKey);
                             if (!user.validate()) {
@@ -439,21 +441,6 @@ public class Handler {
                             } catch (SQLException e) {
                                 e.printStackTrace();
                             }
-                            MqttConnectOptions options = new MqttConnectOptions();
-                            options.setUserName(serial);
-                            options.setPassword(authenticator.toCharArray());
-                            options.setAutomaticReconnect(true);
-                            options.setCleanSession(true);
-                            options.setConnectionTimeout(10);
-                            MqttClient client;
-
-                            try {
-                                client = new MqttClient("localhost:1883", serial);
-                                client.connect(options);
-                                client.publish(serial + "-A", new MqttMessage());
-                            } catch (MqttException e) {
-                                e.printStackTrace();
-                            }
 
                             //They have identified themselves, and they also identified the camera. Now send the speaker packet
                             /*
@@ -463,6 +450,14 @@ public class Handler {
                             easy to send and recieve data from client to device and vice versa.
                              */
 
+                            try {
+                                Main.client.publish(serial + "-A", new MqttMessage());
+                                response = "%ACCEPTED";
+                                code = 200;
+                                System.out.println("Speaker request accepted");
+                            } catch (MqttException e) {
+                                e.printStackTrace();
+                            }
 
                         }
                     }

@@ -8,10 +8,12 @@
         <outputRelativeToContentRoot value="true" />
         <module name="Maven" />
         <module name="untitled" />
+        <module name="SecurityServer" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="Maven" target="16" />
+      <module name="SecurityServer" target="16" />
       <module name="untitled" target="16" />
     </bytecodeTargetLevel>
   </component>
